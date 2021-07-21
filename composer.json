@@ -1,0 +1,38 @@
+{
+    "name": "ilbronza/notifications",
+    "description": ":laravel notifications extended",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Davide Bronzini",
+            "email": "davide@sistema.srl",
+            "homepage": "httpsG://sistema.srl"
+        }
+    ],
+    "homepage": "https://github.com/ilbronza/notifications",
+    "keywords": ["Laravel", "Notifications"],
+    "require": {
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "IlBronza\\Notifications\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "IlBronza\\Notifications\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "IlBronza\\Notifications\\NotificationsServiceProvider"
+            ],
+            "aliases": {
+                "Notifications": "IlBronza\\Notifications\\Facades\\Notifications"
+            }
+        }
+    }
+}
