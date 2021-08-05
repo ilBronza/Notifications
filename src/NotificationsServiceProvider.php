@@ -2,6 +2,8 @@
 
 namespace IlBronza\Notifications;
 
+use IlBronza\Notifications\ExtendedDatabaseNotification;
+use IlBronza\Notifications\Observers\ExtendedDatabaseNotificationObserver;
 use Illuminate\Support\ServiceProvider;
 
 class NotificationsServiceProvider extends ServiceProvider
@@ -15,13 +17,15 @@ class NotificationsServiceProvider extends ServiceProvider
     {
         // $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'ilbronza');
         // $this->loadViewsFrom(__DIR__.'/../resources/views', 'ilbronza');
-        // $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-        // $this->loadRoutesFrom(__DIR__.'/routes.php');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadRoutesFrom(__DIR__.'/routes.php');
 
-        // Publishing is only necessary when using the CLI.
-        if ($this->app->runningInConsole()) {
-            $this->bootForConsole();
-        }
+        ExtendedDatabaseNotification::observe(ExtendedDatabaseNotificationObserver::class);
+
+        // // Publishing is only necessary when using the CLI.
+        // if ($this->app->runningInConsole()) {
+        //     $this->bootForConsole();
+        // }
     }
 
     /**
@@ -33,9 +37,9 @@ class NotificationsServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/notifications.php', 'notifications');
 
-        // Register the service the package provides.
-        $this->app->singleton('notifications', function ($app) {
-            return new Notifications;
+        // // Register the service the package provides.
+        $this->app->singleton('notification', function ($app) {
+            return new Notification;
         });
     }
 
@@ -46,7 +50,7 @@ class NotificationsServiceProvider extends ServiceProvider
      */
     public function provides()
     {
-        return ['notifications'];
+        return ['notification'];
     }
 
     /**
