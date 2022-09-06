@@ -19,9 +19,10 @@ class SlackNotification extends Notification
      *
      * @return void
      */
-    public function __construct(string $message = null)
+    public function __construct(string $message = null, string $url = null)
     {
         $this->message = $message;
+        $this->url = $url;
     }
 
     /**
@@ -43,7 +44,16 @@ class SlackNotification extends Notification
      */
     public function toSlack($notifiable)
     {
-        return (new SlackMessage)
+        $slackMessage = (new SlackMessage)
                     ->content($this->message);
+
+        if($this->url)
+            $slackMessage->attachment(function ($attachment)
+            {
+                $attachment->title('link', $this->url)
+                ->content('Visita il link');
+            });
+
+        return $slackMessage;
     }
 }
