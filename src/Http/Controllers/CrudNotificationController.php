@@ -59,7 +59,7 @@ class CrudNotificationController extends CRUD
         'deleted',
         'archived',
         'reorder',
-        'stroreReorder'
+        'storeReorder'
     ];
 
     /**
