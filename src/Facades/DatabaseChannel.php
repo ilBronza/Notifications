@@ -7,14 +7,7 @@ use Illuminate\Notifications\Notification;
 
 class DatabaseChannel extends BaseDatabaseChannel
 {
-    /**
-     * Build an array payload for the DatabaseNotification Model.
-     *
-     * @param  mixed  $notifiable
-     * @param  \Illuminate\Notifications\Notification  $notification
-     * @return array
-     */
-    protected function buildPayload($notifiable, Notification $notification)
+    public function _buildPayload($notifiable, Notification $notification) : array
     {
         return [
             'id' => $notification->id,
@@ -25,6 +18,17 @@ class DatabaseChannel extends BaseDatabaseChannel
             'link_text' => $notification->getLinkText(),
             'read_at' => null,
             'parent_id' => $notification->getParentId()
-        ];
+        ];        
+    }
+    /**
+     * Build an array payload for the DatabaseNotification Model.
+     *
+     * @param  mixed  $notifiable
+     * @param  \Illuminate\Notifications\Notification  $notification
+     * @return array
+     */
+    protected function buildPayload($notifiable, Notification $notification)
+    {
+        return $this->_buildPayload($notifiable, $notification);
     }
 }
