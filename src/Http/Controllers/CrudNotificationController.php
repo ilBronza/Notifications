@@ -57,9 +57,6 @@ class CrudNotificationController extends CRUD
         'store',
         'destroy',
         'deleted',
-        'archived',
-        'reorder',
-        'storeReorder'
     ];
 
     /**
@@ -151,18 +148,6 @@ class CrudNotificationController extends CRUD
 
 
 
-     /**
-      * START CREATE PARAMETERS AND METHODS
-      **/
-
-    // public function beforeRenderCreate()
-    // {
-    //     $this->modelInstance->agent_id = session('agent')->getKey();
-    // }
-
-     /**
-      * STOP CREATE PARAMETERS AND METHODS
-      **/
 
 }
 

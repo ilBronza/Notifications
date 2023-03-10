@@ -1,4 +1,4 @@
-@if(($count = count($notifications))&&(! session('header.notifications.hidePermanently', false)))
+@if(($notifications ?? false)&&($count = count($notifications))&&(! session('header.notifications.hidePermanently', false)))
 
 <script type="text/javascript">
 jQuery(document).ready(function($)

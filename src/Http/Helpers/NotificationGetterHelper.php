@@ -17,9 +17,11 @@ class NotificationGetterHelper
             'notifiable_id' => $model->getKey()
         ];
 
-        $notifications = Notification::where($polimorphicFilter)->ValidByDate()->unread()->get();
+        // $notifications = Notification::where($polimorphicFilter)->ValidByDate()->unread()->get();
 
         $scheduledNotifications = ScheduledNotification::where($polimorphicFilter)->ValidByDate()->unread()->get();
+
+        return $scheduledNotifications;
 
         return $notifications->merge($scheduledNotifications);
     }
