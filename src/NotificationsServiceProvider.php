@@ -18,7 +18,7 @@ class NotificationsServiceProvider extends ServiceProvider
     {
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'notifications');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'notifications');
-        // $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadRoutesFrom(__DIR__.'/../routes.php');
 
         ExtendedDatabaseNotification::observe(ExtendedDatabaseNotificationObserver::class);
