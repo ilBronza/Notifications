@@ -12,34 +12,32 @@ class BaseNotificationModel extends DatabaseNotification
 {
 	use CRUDCacheTrait;
 	use CRUDModelTrait;
-    use CRUDValidityDatesTrait;
+	use CRUDValidityDatesTrait;
 
 	use CRUDUseUuidTrait;
 
-    public $viewName = 'notifications::notifications._notification';
+	public $viewName = 'notifications::notifications._notification';
+	protected $keyType = 'string';
 
-    public function gertViewName()
-    {
-        return $this->viewName;
-    }
+	public function getMessage() : ?string
+	{
+		if (isset($this->data['message']))
+			return $this->data['message'];
 
-    public function getMessage() : ? string
-    {
-        if(isset($this->data['message']))
-            return $this->data['message'];
+		return null;
+	}
 
-        return null;
-    }
+	public function render()
+	{
+		$viewName = $this->gertViewName();
 
-    public function render()
-    {
-        $viewName = $this->gertViewName();
+		return view($viewName, ['notification' => $this])->render();
+	}
 
-        return view($viewName, ['notification' => $this])->render();
-    }
+	public function gertViewName()
+	{
+		return $this->viewName;
+	}
 
-    public function scopeValid($query)
-    {
-
-    }
+	public function scopeValid($query) {}
 }
