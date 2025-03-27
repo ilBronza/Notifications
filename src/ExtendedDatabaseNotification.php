@@ -15,11 +15,11 @@ class ExtendedDatabaseNotification extends DatabaseNotification
 
 	public $routeClassname = 'notification';
 
-	protected $dates = [
-		'cread_at',
-		'updated_at',
-		'read_at',
-		'managed_at'
+	protected $casts = [
+		'cread_at' => 'datetime',
+		'updated_at' => 'datetime',
+		'read_at' => 'datetime',
+		'managed_at' => 'datetime'
 	];
 
 	public function scopeManaged($query)
