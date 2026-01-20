@@ -4,7 +4,7 @@ namespace IlBronza\Notifications\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use IlBronza\Notifications\Http\Helpers\NotificationGetterHelper;
-use IlBronza\Ukn\Facades\Ukn;
+use IlBronza\Ukn\Ukn;
 
 class NotificationResetCacheController extends Controller
 {
