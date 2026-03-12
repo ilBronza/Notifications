@@ -21,6 +21,8 @@ class NotificationsServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadRoutesFrom(__DIR__.'/../routes.php');
 
+        $this->registerNotificationsAudioDisk();
+
         ExtendedDatabaseNotification::observe(ExtendedDatabaseNotificationObserver::class);
 
         // // Publishing is only necessary when using the CLI.
@@ -91,5 +93,16 @@ class NotificationsServiceProvider extends ServiceProvider
 
         // Registering package commands.
         // $this->commands([]);
+    }
+
+    protected function registerNotificationsAudioDisk(): void
+    {
+        $diskName = config('notifications.voiceMessages.storage_disk');
+
+        if ($diskName === 'notifications_audio' && config("filesystems.disks.{$diskName}") === null) {
+            config([
+                "filesystems.disks.{$diskName}" => config('notifications.voiceMessages.disk_config'),
+            ]);
+        }
     }
 }

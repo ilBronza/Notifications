@@ -3,6 +3,7 @@
 
 return[
 
+	'voice-messages.index' => 'Messaggi vocali',
 	'header.hide' => 'Nascondi',
 	'header.hidePermanently' => 'Nasconi permanentemente',
 	'header.show' => 'Mosta',

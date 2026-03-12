@@ -2,6 +2,7 @@
 
 use IlBronza\Notifications\Http\Controllers\HeaderNotificationVisibilityController;
 use IlBronza\Notifications\Http\Controllers\NotificationResetCacheController;
+use IlBronza\Notifications\Http\Controllers\VoiceMessageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -29,5 +30,8 @@ function()
 	Route::get('notifications/archived', 'CrudNotificationController@archived')->name('notifications.archived');
 
 	Route::resource('notifications', 'CrudNotificationController');
+
+	Route::get('voice-messages', [VoiceMessageController::class, 'index'])->name('notifications.voice-messages.index');
+	Route::post('voice-messages', [VoiceMessageController::class, 'store'])->name('notifications.voice-messages.store');
 
 });
