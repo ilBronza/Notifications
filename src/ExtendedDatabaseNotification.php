@@ -16,6 +16,7 @@ class ExtendedDatabaseNotification extends DatabaseNotification
 	public $routeClassname = 'notification';
 
 	protected $casts = [
+		'data' => 'array',
 		'cread_at' => 'datetime',
 		'updated_at' => 'datetime',
 		'read_at' => 'datetime',
@@ -52,6 +53,11 @@ class ExtendedDatabaseNotification extends DatabaseNotification
 	public function getData()
 	{
 		return $this->data;
+	}
+
+	public function render()
+	{
+		return view('notifications::notifications._notification', ['notification' => $this])->render();
 	}
 
 	public function getMessage()

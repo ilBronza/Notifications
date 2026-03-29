@@ -40,6 +40,32 @@ Per usare S3 o un altro driver, definisci il disk `notifications_audio` in `conf
 ],
 ```
 
+### Speech-to-text (trascrizione)
+
+Helper esterno per trascrivere le note vocali. Chiamabile quando serve:
+
+```php
+use IlBronza\Notifications\Helpers\SpeechToTextHelper;
+
+// Da path assoluto
+$testo = SpeechToTextHelper::transcribe('/path/to/audio.webm');
+
+// Da path relativo allo storage
+$testo = SpeechToTextHelper::transcribe('file.webm', 'notifications_audio');
+
+// Da URL
+$testo = SpeechToTextHelper::transcribe('https://example.com/audio.webm');
+
+// Con lingua specifica (es. italiano)
+$testo = SpeechToTextHelper::transcribe('file.webm', 'notifications_audio', 'it');
+```
+
+Configura in `.env`:
+```
+OPENAI_API_KEY=sk-...
+NOTIFICATIONS_SPEECH_TO_TEXT_DRIVER=openai_whisper
+```
+
 ### Requisiti
 
 - Eseguire `php artisan storage:link` per rendere accessibili i file audio (con disk locale)

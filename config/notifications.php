@@ -20,4 +20,11 @@ return [
 		],
 	],
 
+	'speechToText' => [
+		'driver' => env('NOTIFICATIONS_SPEECH_TO_TEXT_DRIVER', 'openai_whisper'),
+		'openai_whisper' => [
+			'api_key' => env('OPENAI_API_KEY'),
+		],
+	],
+
 ];

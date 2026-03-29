@@ -38,12 +38,12 @@ trait ExtendedNotifiable
 
         return ExtendedDatabaseNotification::where(function($query) use($rolesIds)
         {
-            $query->where('notifiable_type', Role::class);
-            $query->whereIn('notifiable_id', $rolesIds);
+            // $query->where('notifiable_type', Role::class);
+            // $query->whereIn('notifiable_id', $rolesIds);
         })->orWhere(function($query)
         {
-            $query->where('notifiable_type', get_class($this));
-            $query->where('notifiable_id', $this->getKey());
+            // $query->where('notifiable_type', get_class($this));
+            // $query->where('notifiable_id', $this->getKey());
         })->with('children')->whereNotIn('id', $parentedIds);
     }
 
