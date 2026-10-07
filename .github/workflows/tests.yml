@@ -1,0 +1,41 @@
+name: Tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            laravel: '^11.0'
+            testbench: '^9.0'
+          - php: '8.4'
+            laravel: '^12.0'
+            testbench: '^10.0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, dom, pdo_sqlite, fileinfo, gd, exif
+          coverage: none
+      - name: Check out IlBronza dependencies
+        run: |
+          mkdir -p .ci-packages
+          for package in crud accountmanager datatables form formfield buttons menu uikittemplate ukn; do
+            git clone --depth 1 "https://github.com/ilbronza/$package.git" ".ci-packages/$package"
+          done
+      - name: Configure Composer path repositories
+        env:
+          LARAVEL_CONSTRAINT: ${{ matrix.laravel }}
+          TESTBENCH_CONSTRAINT: ${{ matrix.testbench }}
+        run: php tests/configure-ci.php
+      - run: composer validate --no-check-publish
+      - run: composer update --prefer-dist --no-interaction --no-progress
+      - run: composer test:lint
+      - run: composer test
