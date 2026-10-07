@@ -2,42 +2,15 @@
 
 namespace IlBronza\Notifications\Http\Models;
 
-use IlBronza\CRUD\Traits\Model\CRUDCacheTrait;
-use IlBronza\CRUD\Traits\Model\CRUDModelTrait;
-use IlBronza\CRUD\Traits\Model\CRUDTimeRangesTrait;
-use IlBronza\CRUD\Traits\Model\CRUDUseUuidTrait;
-use Illuminate\Notifications\DatabaseNotification;
+use IlBronza\Notifications\ExtendedDatabaseNotification;
 
-class BaseNotificationModel extends DatabaseNotification
+class BaseNotificationModel extends ExtendedDatabaseNotification
 {
-	use CRUDCacheTrait;
-	use CRUDModelTrait;
-	use CRUDTimeRangesTrait;
+    public $viewName = 'notifications::notifications._notification';
 
-	use CRUDUseUuidTrait;
-
-	public $viewName = 'notifications::notifications._notification';
-	protected $keyType = 'string';
-
-	public function getMessage() : ?string
-	{
-		if (isset($this->data['message']))
-			return $this->data['message'];
-
-		return null;
-	}
-
-	public function render()
-	{
-		$viewName = $this->gertViewName();
-
-		return view($viewName, ['notification' => $this])->render();
-	}
-
-	public function gertViewName()
-	{
-		return $this->viewName;
-	}
-
-	public function scopeValid($query) {}
+    public function getViewName() { return $this->viewName; }
+    /** @deprecated Use getViewName(). */
+    public function gertViewName() { return $this->getViewName(); }
+    public function render() { return view($this->getViewName(), ['notification' => $this])->render(); }
+    public function scopeValid($query) { return $this->scopeValidByDate($query); }
 }

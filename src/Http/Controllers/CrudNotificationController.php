@@ -40,14 +40,10 @@ class CrudNotificationController extends CRUD
 
     use CRUDNestableTrait;
 
-    /**
-     * subject model class full path
-     **/
     public $modelClass = ExtendedDatabaseNotification::class;
 
-    /**
-     * http methods allowed. remove non existing methods to get a 403
-     **/
+    public $routeBaseNamePieces = ['notifications'];
+
     public $allowedMethods = [
         'index',
         'show',
@@ -57,97 +53,106 @@ class CrudNotificationController extends CRUD
         'store',
         'destroy',
         'deleted',
+        'archived',
     ];
 
-    /**
-     * to override show view use full view name
-     **/
-    //public $showView = 'products.showPartial';
-
-    // public $guardedEditDBFields = ['id', 'created_at', 'updated_at', 'deleted_at'];
-    // public $guardedCreateDBFields = ['id', 'created_at', 'updated_at', 'deleted_at'];
-    // public $guardedShowDBFields = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-    /**
-     * relations called to be automatically shown on 'show' method
-     **/
-    //public $showMethodRelationships = ['posts', 'users', 'operations'];
-
-    /**
-        protected $relationshipsControllers = [
-        'permissions' => '\IlBronza\AccountManager\Http\Controllers\PermissionController'
-    ];
-    **/
-
-
-    /**
-     * getter method for 'index' method.
-     *
-     * is declared here to force the developer to rationally choose which elements to be shown
-     *
-     * @return Collection
-     **/
-     
     public function getIndexElements()
     {
         $user = Auth::user();
 
-        cache()->forget('notificationsCount' . $user->getKey());
-
-        return $user->getUnmanagedNotifications();
+        return ExtendedDatabaseNotification::query()->inboxFor($user)->with('parent')->toManage()->latest()->get();
     }
 
     public function getArchivedElements()
     {
         $user = Auth::user();
 
-        return $user->getArchivedNotifications();        
+        return ExtendedDatabaseNotification::query()->inboxFor($user)->with('parent')->managed()->latest()->get();
     }
-    /**
-     * parameter that decides which fields to use inside index table
-     **/
-    //  public $indexFieldsGroups = ['index'];
 
-    /**
-     * parameter that decides if create button is available
-     **/
-     public $avoidCreateButton = true;
+    public $avoidCreateButton = true;
 
-
-    /**
-     * START base methods declared in extended controller to correctly perform dependency injection
-     *
-     * these methods are compulsorily needed to execute CRUD base functions
-     **/
     public function show(ExtendedDatabaseNotification $notification)
     {
-        //$this->addExtraView('top', 'folder.subFolder.viewName', ['some' => $thing]);
-
+        abort_unless($notification->canBeAccessedBy(auth()->user()), 403);
         return $this->_show($notification);
     }
 
     public function edit(ExtendedDatabaseNotification $notification)
     {
+        abort_unless($notification->canBeAccessedBy(auth()->user()), 403);
         return $this->_edit($notification);
     }
 
     public function update(Request $request, ExtendedDatabaseNotification $notification)
     {
-        return $this->_update($request, $notification);
+        abort_unless($notification->canBeAccessedBy($request->user()), 403);
+        $rules = ['read_at' => 'nullable|boolean', 'managed_at' => 'nullable|boolean', 'managed' => 'nullable|string|max:255'];
+        if ($request->boolean('ib-editor')) {
+            $input = $request->validate(['field' => ['required', \Illuminate\Validation\Rule::in(array_keys($rules))]]);
+            $value = $request->validate(['value' => $rules[$input['field']]]);
+            $data = [$input['field'] => $value['value'] ?? null];
+        } else {
+            $data = $request->validate($rules);
+        }
+        foreach (['read_at', 'managed_at'] as $field) {
+            if (array_key_exists($field, $data)) { $data[$field] = (bool) $data[$field]; }
+        }
+        $notification->getConnection()->transaction(fn () => $notification->update($data));
+        if ($request->expectsJson() || $request->boolean('ib-editor')) {
+            return response()->json(['success' => true, 'update-editor' => true, 'model-id' => $notification->id,
+                'field' => $request->input('field'), 'value' => $request->input('value')]);
+        }
+        return redirect()->route('notifications.show', $notification);
     }
 
     public function destroy(ExtendedDatabaseNotification $notification)
     {
-        return $this->_destroy($notification);
+        abort_unless($notification->canBeAccessedBy(auth()->user()), 403);
+        $notification->delete();
+        return request()->expectsJson() ? response()->json(['success' => true]) : redirect()->route('notifications.index');
     }
 
-    /**
-     * END base methods
-     **/
+    public function create()
+    {
+        $directory = app(\IlBronza\Notifications\Support\RecipientDirectory::class);
+        $directory->authorizeSending();
+        $search = request()->validate(['q' => 'nullable|string|max:100'])['q'] ?? null;
+        $users = $directory->query()->when($search, fn ($query) => $query->where('name', 'like', '%'.$search.'%'))->limit(50)->get();
+        return view('notifications::notifications.create', compact('users'));
+    }
 
+    public function store(Request $request)
+    {
+        $input = $request->validate(['user_id' => ['required', 'regex:/\A[a-zA-Z0-9_-]{1,64}\z/'], 'message' => 'required|string|max:10000', 'managed' => 'nullable|string|max:255']);
+        $recipient = app(\IlBronza\Notifications\Support\RecipientDirectory::class)->find($input['user_id']);
+        $id = (new ExtendedDatabaseNotification)->getConnection()->transaction(function () use ($recipient, $input) {
+            $id = \IlBronza\Notifications\Notification::users($recipient)
+                ->notification(new \IlBronza\Notifications\Notifications\TextNotification($input['message']))->send();
+            $notification = ExtendedDatabaseNotification::findOrFail($id);
+            if (! empty($input['managed'])) { $notification->update(['managed' => $input['managed']]); }
+            return $id;
+        });
+        return $request->expectsJson() ? response()->json(['success' => true, 'id' => $id], 201)
+            : redirect()->route('notifications.index')->with('success', __('notifications::notifications.sent'));
+    }
 
+    public function index()
+    {
+        return $this->renderInbox(false);
+    }
 
+    public function archived()
+    {
+        return $this->renderInbox(true);
+    }
 
-
+    private function renderInbox(bool $archived)
+    {
+        $query = ExtendedDatabaseNotification::query()->inboxFor(auth()->user())->with('parent')->latest();
+        $archived ? $query->managed() : $query->toManage();
+        if (request()->boolean('unread')) { $query->unread(); }
+        $notifications = $query->paginate(25)->withQueryString();
+        return view('notifications::notifications.inbox', compact('notifications', 'archived'));
+    }
 }
-
