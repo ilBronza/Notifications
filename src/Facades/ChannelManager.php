@@ -23,6 +23,13 @@ class ChannelManager extends BaseChannelManager
         )->send($notifiables, $notification);
     }
 
+    public function sendNow($notifiables, $notification, ?array $channels = null)
+    {
+        return (new NotificationSender(
+            $this, $this->container->make(Bus::class), $this->container->make(Dispatcher::class), $this->locale
+        ))->sendNow($notifiables, $notification, $channels);
+    }
+
     /**
      * Create an instance of the database driver.
      *

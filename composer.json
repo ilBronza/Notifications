@@ -1,6 +1,6 @@
 {
     "name": "ilbronza/notifications",
-    "description": ":laravel notifications extended",
+    "description": "Database notifications, shared management and private voice messages for Laravel",
     "license": "MIT",
     "authors": [
         {
@@ -10,10 +10,30 @@
         }
     ],
     "homepage": "https://github.com/ilbronza/notifications",
-    "keywords": ["Laravel", "Notifications"],
+    "keywords": [
+        "Laravel",
+        "Notifications"
+    ],
     "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0 || ^12.0",
+        "ilbronza/crud": "^2.5",
+        "ilbronza/accountmanager": "^2.5",
+        "ilbronza/datatables": "^2.5",
+        "ilbronza/form": "^2.5",
+        "ilbronza/formfield": "^2.5",
+        "ilbronza/buttons": "^2.5",
+        "ilbronza/menu": "^2.5",
+        "ilbronza/uikittemplate": "^2.5",
+        "ilbronza/ukn": "^2.5",
+        "spatie/laravel-activitylog": "^4.0",
+        "spatie/laravel-permission": "^6.0",
+        "spatie/laravel-medialibrary": "^11.0"
     },
     "require-dev": {
+        "orchestra/testbench": "^9.0 || ^10.0",
+        "phpunit/phpunit": "^11.0",
+        "mockery/mockery": "^1.6"
     },
     "autoload": {
         "psr-4": {
@@ -22,7 +42,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "IlBronza\\Notifications\\Tests\\": "tests"
+            "IlBronza\\Notifications\\Tests\\": "tests",
+            "App\\": "tests/Fixtures/App/"
         }
     },
     "extra": {
@@ -34,5 +55,12 @@
                 "Notifications": "IlBronza\\Notifications\\Facades\\Notifications"
             }
         }
+    },
+    "suggest": {
+        "laravel/slack-notification-channel": "Required only when using SlackNotification."
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:lint": "@php tests/lint.php"
     }
 }

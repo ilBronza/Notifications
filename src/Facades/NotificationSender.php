@@ -2,124 +2,97 @@
 
 namespace IlBronza\Notifications\Facades;
 
-use Illuminate\Support\Str;
+use IlBronza\Notifications\Jobs\SendQueuedNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\AnonymousNotifiable;
-use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Notifications\NotificationSender as BaseNotificationSender;
+use Illuminate\Support\Str;
 
 class NotificationSender extends BaseNotificationSender
 {
-    /**
-     * Send the given notification to the given notifiable entities.
-     *
-     * @param  \Illuminate\Support\Collection|array|mixed  $notifiables
-     * @param  mixed  $notification
-     * @return void
-     */
     public function send($notifiables, $notification)
     {
-        $notifiables = $this->formatNotifiables($notifiables);
-
-        if ($notification instanceof ShouldQueue) {
-            return $this->queueNotification($notifiables, $notification);
-        }
-
-        return $this->sendNow($notifiables, $notification);
+        return $notification instanceof ShouldQueue
+            ? $this->queueNotification($notifiables, $notification)
+            : $this->sendNow($notifiables, $notification);
     }
 
-    /**
-     * Send the given notification immediately.
-     *
-     * @param  \Illuminate\Support\Collection|array|mixed  $notifiables
-     * @param  mixed  $notification
-     * @param  array|null  $channels
-     * @return void
-     */
-    public function sendNow($notifiables, $notification, array $channels = null)
+    public function sendNow($notifiables, $notification, ?array $channels = null)
     {
-        $notificationIds = collect();
-
         $notifiables = $this->formatNotifiables($notifiables);
-
-        $original = clone $notification;
-
+        if ($notification->id && count($notifiables) > 1) {
+            throw new \InvalidArgumentException('An explicit notification ID can only identify one recipient.');
+        }
+        $ids = collect();
         foreach ($notifiables as $notifiable) {
-            if (empty($viaChannels = $channels ?: $notification->via($notifiable))) {
+            $via = $channels ?? $notification->via($notifiable);
+            if (empty($via)) {
                 continue;
             }
-
-            $this->withLocale($this->preferredLocale($notifiable, $notification), function () use ($viaChannels, $notifiable, $original, $notificationIds) {
-                $notificationId = Str::uuid()->toString();
-
-                $notificationIds->push($notificationId);
-
-                foreach ((array) $viaChannels as $channel) {
-                    if (! ($notifiable instanceof AnonymousNotifiable && $channel === 'database')) {
-                        $this->sendToNotifiable($notifiable, $notificationId, clone $original, $channel);
+            $this->withLocale($this->preferredLocale($notifiable, $notification), function () use ($notifiable, $notification, $via, $ids) {
+                $id = $notification->id ?: (string) Str::uuid();
+                $sent = false;
+                foreach ($via as $channel) {
+                    if ($notifiable instanceof AnonymousNotifiable && $channel === 'database') {
+                        continue;
                     }
+                    $sent = $this->sendToNotifiable($notifiable, $id, clone $notification, $channel) || $sent;
                 }
+                if ($sent) { $ids->push($id); }
             });
         }
-
-        if(count($notificationIds) == 1)
-            return $notificationIds->first();
-
-        throw new \Exception('too many notifications ids');
-        return $notificationIds;
+        return $ids->count() === 1 ? $ids->first() : $ids;
     }
 
-    /**
-     * Queue the given notification instances.
-     *
-     * @param  mixed  $notifiables
-     * @param  \Illuminate\Notifications\Notification  $notification
-     * @return void
-     */
     protected function queueNotification($notifiables, $notification)
     {
-        $notificationIds = collect();
         $notifiables = $this->formatNotifiables($notifiables);
-
-        $original = clone $notification;
-
-        foreach ($notifiables as $notifiable) {
-            $notificationId = Str::uuid()->toString();
-            $notificationIds->push($notificationId);
-
-            foreach ((array) $original->via($notifiable) as $channel) {
-                $notification = clone $original;
-
-                $notification->id = $notificationId;
-
-                if (! is_null($this->locale)) {
-                    $notification->locale = $this->locale;
-                }
-
-                $queue = $notification->queue;
-
-                if (method_exists($notification, 'viaQueues')) {
-                    $queue = $notification->viaQueues()[$channel] ?? null;
-                }
-
-                $this->bus->dispatch(
-                    (new SendQueuedNotifications($notifiable, $notification, [$channel]))
-                            ->onConnection($notification->connection)
-                            ->onQueue($queue)
-                            ->delay(is_array($notification->delay) ?
-                                    ($notification->delay[$channel] ?? null)
-                                    : $notification->delay
-                            )
-                            ->through(
-                                array_merge(
-                                    method_exists($notification, 'middleware') ? $notification->middleware() : [],
-                                    $notification->middleware ?? []
-                                )
-                            )
-                );
-            }
+        if ($notification->id && count($notifiables) > 1) {
+            throw new \InvalidArgumentException('An explicit notification ID can only identify one recipient.');
         }
+        $ids = collect();
+        foreach ($notifiables as $notifiable) {
+            $channels = $notification->via($notifiable);
+            if (empty($channels)) {
+                continue;
+            }
+            $id = $notification->id ?: (string) Str::uuid();
+            foreach ($channels as $channel) {
+                if ($notifiable instanceof AnonymousNotifiable && $channel === 'database') {
+                    continue;
+                }
+                $copy = clone $notification;
+                $copy->id = $id;
+                if ($copy instanceof \IlBronza\Notifications\Notification) {
+                    $copy->createdBy = $copy->createdBy ?? $copy->user?->getKey();
+                    $copy->user = null;
+                }
+                $copy->locale = $copy->locale ?? $this->locale;
+                $connection = method_exists($copy, 'viaConnections') ? ($copy->viaConnections()[$channel] ?? null) : ($copy->connection ?? null);
+                $queue = method_exists($copy, 'viaQueues') ? ($copy->viaQueues()[$channel] ?? null) : ($copy->queue ?? null);
+                $delay = method_exists($copy, 'withDelay') ? $copy->withDelay($notifiable, $channel) : ($copy->delay ?? null);
+                $middleware = $copy->middleware ?? [];
+                if (method_exists($copy, 'middleware')) {
+                    $middleware = array_merge($copy->middleware($notifiable, $channel), $middleware);
+                }
+                $this->bus->dispatch((new SendQueuedNotification($notifiable, $copy, [$channel]))
+                    ->onConnection($connection)->onQueue($queue)
+                    ->delay(is_array($delay) ? ($delay[$channel] ?? null) : $delay)
+                    ->through($middleware)->afterCommit());
+            }
+            $ids->push($id);
+        }
+        return $ids->count() === 1 ? $ids->first() : $ids;
+    }
 
-        return $notificationIds;
+    protected function sendToNotifiable($notifiable, $id, $notification, $channel)
+    {
+        $notification->id = $notification->id ?: $id;
+        if (! $this->shouldSendNotification($notifiable, $notification, $channel)) {
+            return false;
+        }
+        $response = $this->manager->driver($channel)->send($notifiable, $notification);
+        $this->events->dispatch(new \Illuminate\Notifications\Events\NotificationSent($notifiable, $notification, $channel, $response));
+        return true;
     }
 }

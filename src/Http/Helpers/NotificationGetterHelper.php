@@ -2,80 +2,53 @@
 
 namespace IlBronza\Notifications\Http\Helpers;
 
-use Auth;
-use IlBronza\Notifications\Http\Models\Notification;
-use IlBronza\Notifications\Http\Models\ScheduledNotification;
+use IlBronza\Notifications\ExtendedDatabaseNotification;
+use IlBronza\Notifications\Support\Recipients;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class NotificationGetterHelper
 {
-    static function getHeaderNotificationsByModel(Model $model)
+    protected static function headerQuery()
     {
-        $polimorphicFilter = [
-            'notifiable_type' => get_class($model),
-            'notifiable_id' => $model->getKey()
-        ];
-
-        // $notifications = Notification::where($polimorphicFilter)->ValidByDate()->unread()->get();
-
-        $scheduledNotifications = ScheduledNotification::where($polimorphicFilter)->ValidByDate()->unread()->get();
-
-        return $scheduledNotifications;
-
-        return $notifications->merge($scheduledNotifications);
+        return ExtendedDatabaseNotification::query()->validByDate()->unread()->toManage()
+            ->where('headerbar', true)->orderByDesc('priority')->latest();
     }
 
-    static function getUserHeaderNotifications() : ? Collection
+    public static function getHeaderNotificationsByModel(Model $model)
     {
-        return static::getHeaderNotificationsByModel(Auth::user());
+        return static::headerQuery()->whereIn('notifiable_type', [$model->getMorphClass(), get_class($model)])
+            ->where('notifiable_id', $model->getKey())->with('parent')
+            ->limit(config('notifications.headerNotifications.limit', 50))->get();
     }
 
-    static function getRolesHeaderNotifications() : ? Collection
+    public static function getUserHeaderNotifications(): Collection
+    {
+        return Auth::user() ? static::getHeaderNotificationsByModel(Auth::user()) : collect();
+    }
+
+    public static function getRolesHeaderNotifications(): Collection
     {
         $result = collect();
-
-        $roles = Auth::user()->roles()->get();
-
-        foreach($roles as $role)
-            $result->merge(
-                static::getHeaderNotificationsByModel($role)
-            );
-
+        if ($user = Auth::user()) {
+            foreach (Recipients::roles($user) as $role) {
+                $result = $result->merge(static::getHeaderNotificationsByModel($role));
+            }
+        }
         return $result;
     }
 
-    static function resetHeaderSessionCache()
+    public static function resetHeaderSessionCache()
     {
-        return session()->forget(
-            config('notifications.headerNotifications.sessionKey')
-        );
+        session()->forget(config('notifications.headerNotifications.sessionKey', 'headerNotifications'));
     }
 
-    static function getHeaderNotifications(int $secondsValidity = 1200)
+    // The argument remains for compatibility. Queries are fresh so queued deliveries are visible immediately.
+    public static function getHeaderNotifications(int $secondsValidity = 1200)
     {
-        if(! $user = Auth::user())
-            return null;
-
-    	if(($sessionNotifications = session(
-            config('notifications.headerNotifications.sessionKey')
-        ))&&($sessionNotifications['timestamp'] > time() - $secondsValidity))
-    		return $sessionNotifications['notifications'];
-
-        $userNotifications = static::getUserHeaderNotifications();
-        $rolesNotifications = static::getRolesHeaderNotifications();
-
-        $notifications = $userNotifications->merge(
-            $rolesNotifications
-        );
-
-        session()->put(
-            config('notifications.headerNotifications.sessionKey')
-            , [
-        	'timestamp' => time(),
-        	'notifications' => $notifications
-        ]);
-
-        return $notifications;
+        $user = Auth::user();
+        return $user ? static::headerQuery()->inboxFor($user)->with('parent')
+            ->limit(config('notifications.headerNotifications.limit', 50))->get() : collect();
     }
 }

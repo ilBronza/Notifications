@@ -2,13 +2,15 @@
 
 namespace IlBronza\Notifications\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 
 class HeaderNotificationVisibilityController extends Controller
 {
 	public function show()
 	{
 		session()->put('header.notifications.visible', true);
+        session()->forget('header.notifications.hidePermanently');
+        \IlBronza\Notifications\NotificationPreference::setHeaderHidden(auth()->user(), false);
 
 		return [
 			'message' => trans('notifications::notifications.headerNotificationsVisible')
@@ -26,7 +28,7 @@ class HeaderNotificationVisibilityController extends Controller
 
 	public function hidePermanently()
 	{
-		session()->put('header.notifications.hidePermanently', true);
+		\IlBronza\Notifications\NotificationPreference::setHeaderHidden(auth()->user(), true);
 
 		return [
 			'message' => trans('notifications::notifications.headerNotificationsNotVisiblePermanently')

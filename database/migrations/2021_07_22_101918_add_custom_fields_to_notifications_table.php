@@ -38,13 +38,11 @@ class AddCustomFieldsToNotificationsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('notifiables');
-
         Schema::table('notifications', function (Blueprint $table)
         {
-            $table->dropForeign('notifications_parent_id_foreign');
-            $table->dropForeign('notifications_created_by_foreign');
-            $table->dropForeign('notifications_managed_by_foreign');
+            $table->dropForeign(['parent_id']);
+            $table->dropForeign(['created_by']);
+            $table->dropForeign(['managed_by']);
 
             $table->dropColumn('parent_id');
             $table->dropColumn('created_by');

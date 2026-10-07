@@ -8,10 +8,17 @@ use IlBronza\Notifications\Notification;
 class ScheduledNotification extends Notification
 {
 	public $appearsInHeaderBar = true;
+    protected ?Carbon $defaultScheduledDate = null;
+
+    public function scheduledFor(Carbon $date): static
+    {
+        $this->defaultScheduledDate = $date->copy();
+        return $this;
+    }
 
 	public function getScheduledDate()
 	{
-		return $this->scheduledDate;
+		return $this->scheduledDate ?? $this->defaultScheduledDate ?? throw new \LogicException('Set a scheduled date before sending.');
 	}
 
 	public function getNotificationDays()
@@ -21,7 +28,7 @@ class ScheduledNotification extends Notification
 
 	public function getValidFromDate() : Carbon
 	{
-		$date = $this->scheduledDate->copy();
+		$date = $this->getScheduledDate()->copy();
 
 		return $date->subDays(
 			$this->getNotificationDays()
@@ -38,7 +45,7 @@ class ScheduledNotification extends Notification
 		if(! ($this->data ?? false))
 			return null;
 		
-		if(! ($this->data['priority'] ?? false))
+		if(! isset($this->data['priority']))
 			return null;
 
 		return $this->data['priority'];

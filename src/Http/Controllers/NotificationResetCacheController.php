@@ -2,9 +2,9 @@
 
 namespace IlBronza\Notifications\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 use IlBronza\Notifications\Http\Helpers\NotificationGetterHelper;
-use IlBronza\Ukn\Ukn;
+
 
 class NotificationResetCacheController extends Controller
 {
@@ -12,7 +12,7 @@ class NotificationResetCacheController extends Controller
     {
         NotificationGetterHelper::resetHeaderSessionCache();
 
-        Ukn::s('Header notifications cache reset');
+        session()->flash('success', __('notifications::notifications.cacheReset'));
 
         return back();
     }

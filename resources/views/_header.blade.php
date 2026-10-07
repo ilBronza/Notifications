@@ -79,7 +79,9 @@ jQuery(document).ready(function($)
 
 <div>
 	<div class="uk-align-right">
-		<a href="{{ route('notifications.header.resetSessionCache') }}">RESET</a>
+		<form method="POST" action="{{ route('notifications.header.resetSessionCache') }}">@csrf
+            <button type="submit" class="uk-button uk-button-text">@lang('notifications::notifications.refresh')</button>
+        </form>
 	</div>
 </div>
 

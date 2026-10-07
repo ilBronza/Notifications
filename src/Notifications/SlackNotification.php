@@ -3,57 +3,32 @@
 namespace IlBronza\Notifications\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\SlackMessage;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use LogicException;
 
 class SlackNotification extends Notification
 {
     use Queueable;
 
-    public $message;
+    public function __construct(public ?string $message = null, public ?string $url = null) {}
 
-    /**
-     * Create a new notification instance.
-     *
-     * @return void
-     */
-    public function __construct(string $message = null, string $url = null)
-    {
-        $this->message = $message;
-        $this->url = $url;
-    }
+    public function via($notifiable) { return ['slack']; }
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @param  mixed  $notifiable
-     * @return array
-     */
-    public function via($notifiable)
-    {
-        return ['slack'];
-    }
-
-    /**
-     * Get the mail representation of the notification.
-     *
-     * @param  mixed  $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
-     */
     public function toSlack($notifiable)
     {
-        $slackMessage = (new SlackMessage)
-                    ->content($this->message);
-
-        if($this->url)
-            $slackMessage->attachment(function ($attachment)
-            {
-                $attachment->title('link', $this->url)
-                ->content('Visita il link');
-            });
-
-        return $slackMessage;
+        // Preserve webhook-based integrations when the legacy message API is installed.
+        if (class_exists(\Illuminate\Notifications\Messages\SlackMessage::class)) {
+            $message = (new \Illuminate\Notifications\Messages\SlackMessage)->content($this->message ?? '');
+            if ($this->url) {
+                $message->attachment(fn ($attachment) => $attachment->title('link', $this->url));
+            }
+            return $message;
+        }
+        if (class_exists(\Illuminate\Notifications\Slack\SlackMessage::class)) {
+            return (new \Illuminate\Notifications\Slack\SlackMessage)->text(
+                ($this->message ?? '').($this->url ? "\n".$this->url : '')
+            );
+        }
+        throw new LogicException('Install and configure laravel/slack-notification-channel before sending Slack notifications.');
     }
 }

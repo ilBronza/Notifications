@@ -6,31 +6,25 @@ use IlBronza\Notifications\ExtendedDatabaseNotification;
 
 class ExtendedDatabaseNotificationObserver
 {
-	static $parentingUpdatingFields = ['managed_by', 'managed_at', 'managed'];
+    public static $parentingUpdatingFields = ['managed_by', 'managed_at', 'managed'];
 
-	private function checkParentingUpdatingFields(ExtendedDatabaseNotification $notification)
-	{
-		$propagatingFields = static::$parentingUpdatingFields;
+    public function updating(ExtendedDatabaseNotification $notification)
+    {
+        if ($notification->isDirty('managed_at') && ! $notification->isDirty('managed_by')) {
+            $notification->managed_by = $notification->managed_at ? auth()->id() : null;
+        }
+    }
 
-		if(! $notification->isDirty($propagatingFields))
-			return ;
-
-		$dirty = $notification->getDirty();
-
-		$notification->parentingGlobalPropagation(
-			array_keys(array_intersect_key($dirty, array_flip($propagatingFields)))
-		);
-	}
-
-	public function updated(ExtendedDatabaseNotification $notification)
-	{
-		//update managing fields to all notifications
-		$this->checkParentingUpdatingFields($notification);
-
-		//update read at only to father
-		if($notification->isDirty('read_at'))
-			if($notification->read_at)
-				if($parent = $notification->parent)
-					$parent->update(['read_at' => $notification->read_at]);
-	}
+    public function updated(ExtendedDatabaseNotification $notification)
+    {
+        $fields = array_intersect_key($notification->getChanges(), array_flip(static::$parentingUpdatingFields));
+        if ($fields === []) {
+            return;
+        }
+        $root = $notification->parent_id ?: $notification->getKey();
+        // A single query avoids recursive observers. Read state belongs to each receipt.
+        ExtendedDatabaseNotification::query()->where(function ($query) use ($root) {
+            $query->whereKey($root)->orWhere('parent_id', $root);
+        })->where('id', '!=', $notification->getKey())->update($fields);
+    }
 }
