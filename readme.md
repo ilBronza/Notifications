@@ -5,7 +5,10 @@ azioni multiple, avvisi nell'header e messaggi vocali privati.
 
 ## Installazione
 
-Requisiti dichiarati: PHP 8.2+, Laravel 11 o 12 e package IlBronza 2.5+.
+Requisiti dichiarati: PHP 8.2+, Laravel con minimo dichiarato in Composer
+e package IlBronza 2.5+.
+
+I vincoli Composer delle dipendenze Laravel e delle relative integrazioni indicano soltanto una versione minima, senza un limite sulle major successive. La scelta delle versioni concrete spetta all’applicazione ospite e al suo `composer.lock`; la compatibilità del codice va verificata con i test.
 Il CRUD e il layout predefinito usano l'ecosistema IlBronza; il package non è
 un sostituto indipendente di CRUD/AccountManager/UikitTemplate.
 
