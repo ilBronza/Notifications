@@ -2,8 +2,11 @@
 
 namespace IlBronza\Notifications;
 
+use IlBronza\Notifications\Channels\BackupSlackChannel;
 use IlBronza\Notifications\Console\PruneNotifications;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification;
+use Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification;
 
 class NotificationsServiceProvider extends ServiceProvider
 {
@@ -16,6 +19,7 @@ class NotificationsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->configureBackupSlackChannel();
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'notifications');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'notifications');
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
@@ -33,6 +37,37 @@ class NotificationsServiceProvider extends ServiceProvider
             $this->publishes([__DIR__.'/../resources/lang' => lang_path('vendor/notifications')], 'notifications.translations');
             $this->commands([PruneNotifications::class]);
         }
+    }
+
+    private function configureBackupSlackChannel(): void
+    {
+        $backupNotifications = config('backup.notifications.notifications');
+
+        if (! is_array($backupNotifications)) {
+            return;
+        }
+
+        $webhookKeys = [
+            BackupWasSuccessfulNotification::class => 'success_webhook_url',
+            BackupHasFailedNotification::class => 'failure_webhook_url',
+        ];
+
+        foreach ($webhookKeys as $notification => $webhookKey) {
+            if (! isset($backupNotifications[$notification])
+                || ! config('notifications.backup_slack.'.$webhookKey)
+                || config('backup.notifications.slack.'.$webhookKey)) {
+                continue;
+            }
+
+            $channels = array_diff($backupNotifications[$notification], ['slack', BackupSlackChannel::class]);
+
+            $backupNotifications[$notification] = [
+                BackupSlackChannel::class,
+                ...array_values($channels),
+            ];
+        }
+
+        config(['backup.notifications.notifications' => $backupNotifications]);
     }
 
     public function provides() { return ['notification', 'notifications']; }

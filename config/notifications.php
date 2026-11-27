@@ -25,6 +25,11 @@ return [
             'throw' => true,
         ],
     ],
+    'backup_slack' => [
+        'project_name' => env('BACKUP_SLACK_PROJECT_NAME'),
+        'success_webhook_url' => env('BACKUP_SLACK_SUCCESS_WEBHOOK_URL'),
+        'failure_webhook_url' => env('BACKUP_SLACK_FAILURE_WEBHOOK_URL'),
+    ],
     'speechToText' => [
         'driver' => env('NOTIFICATIONS_SPEECH_TO_TEXT_DRIVER', 'openai_whisper'),
         'timeout' => 60,
